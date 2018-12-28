@@ -1,10 +1,12 @@
 # -*- coding:utf-8 -*-
 import pymysql
-'insert into douban_short(rate,cover_x,title,url,playable,cover,id,cover_y,is_new,message) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);'
+
 douban_short_create_sql = """
 CREATE TABLE `douban_short` (
   `id`  INT primary key NOT NULL auto_increment  COMMENT '主键ID',
+  `username` varchar(100) DEFAULT NULL COMMENT '用户名',
   `movie_id` BIGINT NULL COMMENT '电影ID',
+  `votes` INT default 0 COMMENT '觉得有用',
   `rate` FLOAT(6,2) DEFAULT 0 NULL COMMENT '评分',
   `cover_x` INT NULL COMMENT '海报宽度',
   `cover_y` INT NULL COMMENT '海报长度',
@@ -13,12 +15,16 @@ CREATE TABLE `douban_short` (
   `title` varchar(30) DEFAULT NULL COMMENT '电影名称',
   `url` varchar(800) DEFAULT NULL COMMENT '电影URL',
   `cover` varchar(800) DEFAULT NULL COMMENT '海报URL',
-  `message` TEXT DEFAULT NULL COMMENT '短评'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='豆瓣短评表';
+  `message_username_md5` varchar(32) UNIQUE not null COMMENT '用户名和评论的MD5',
+  `message` TEXT DEFAULT NULL COMMENT '短评',
+  `comment_time`  datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '评论时间',
+  `update_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='豆瓣短评表';
 """
 
 TABLE_CONFIG = {
-    'douban_db': douban_short_create_sql,
+    'douban_short': douban_short_create_sql,
 }
 
 API_HOME = 'http://movie.douban.com/j/search_subjects'
@@ -34,7 +40,7 @@ MOVIE_CONFIG = {
 }
 SHORT_CONFIG = {
     'start': 0,  # 短评从第几条开始获取
-    'short_num': 20  # 爬取短评条数
+    'short_num': 500  # 爬取短评条数
 }
 DB_CONNS = {
     'default': lambda: pymysql.connect(host="localhost", port=3306, user="root",
