@@ -1,4 +1,5 @@
 # -*- coding:utf-8 -*-
+import hashlib
 import json
 import logging
 import multiprocessing
@@ -6,16 +7,13 @@ import os
 import random
 import string
 
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from pymysql import InternalError
 from selenium import webdriver
 
-from setting.setting import API_SHORT, MOVIE_CONFIG, SHORT_CONFIG, HEADER, API_URL, FILE_PATH, \
-    FILE_NAME, PROCESSES_NUM, DB_CONNS, TABLE_CONFIG
-
-FLAG = True
+from setting.setting import API_SHORT, MOVIE_CONFIG, SHORT_CONFIG, HEADER, API_URL, PROCESSES_NUM, DB_CONNS, \
+    TABLE_CONFIG
 
 logger = logging.getLogger('short')
 
@@ -63,29 +61,6 @@ def get_movie():
         for movie in data['subjects']:
             movie['movie_id'] = movie.pop('id')
             yield movie
-
-
-# def save_csv(movie):
-#     file.write(movie['title'] + ',')
-#     file.write(movie['rate'] + ',')
-#     file.write(movie['url'] + ',')
-#     file.write(movie['cover'] + ',')
-#     for short in movie['messages']:
-#         message = str(short).strip().replace(',', '，').replace('\r', '').replace('\n', '')
-#         print(message)
-#         print("------------------------------------------------------")
-#         file.write(message + ',')
-#     file.write('\n')
-
-
-def get_browser():
-    chromedriver = "C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe"
-    os.environ["webdriver.chrome.driver"] = chromedriver
-    option = webdriver.ChromeOptions()
-    # option.add_argument('headless')
-    # browser = webdriver.Chrome(chromedriver, chrome_options=option)
-    browser = webdriver.Chrome(chromedriver)
-    return browser
 
 
 def get_tag(text, selector):
@@ -140,9 +115,9 @@ def table_exists(table_name, conn):
         return False  # 不存在返回False
 
 
-def execute_sql(conn, sql, values=None):
+def execute_sql(conn, sql):
     cur = conn.cursor()
-    logger.info('正在执行sql:[%s]' % (sql,))
+    print('正在执行sql:[%s]' % (sql,))
     cur.execute(sql)
     res = cur.fetchall()
     cur.close()
@@ -156,34 +131,59 @@ def to_db(df):
     try:
         list(map(lambda x: execute_sql(conn, TABLE_CONFIG[x]) if not table_exists(x, conn) else 0, TABLE_CONFIG.keys()))
     except Exception as e:
-        logger.error(e)
+        print(e)
     # 执行sql,保存数据
-    logger.info('正在保存数据:%s' % (sql_list,))
+    print('正在保存数据:%s' % (sql_list,))
     cur = conn.cursor()
     for sql, value in sql_list:
         try:
             cur.execute(sql, value)
             conn.commit()
         except InternalError as e:
-            logger.error(e)
+            print(e)
     cur.close()
     conn.close()
 
 
-def deal_by_process(movie, start):
-    from app import browser
-    browser.get(API_SHORT % (movie['movie_id'], start))  # 需要打开的网址
+def get_html(url):
+    print('正在获取网页:%s' % (url,))
+    chromedriver = "C:\Program Files (x86)\Google\Chrome\Application\chromedriver.exe"
+    os.environ["webdriver.chrome.driver"] = chromedriver
+    option = webdriver.ChromeOptions()
+    option.add_argument('headless')
+    browser = webdriver.Chrome(chromedriver, chrome_options=option)
+    # browser = webdriver.Chrome(chromedriver)
+    browser.get(url)  # 需要打开的网址
     html = browser.page_source
+    browser.quit()
+    return html
+
+
+def get_md5_value(value):
+    # 将字符串转成md5
+    md5 = hashlib.md5()  # 获取一个MD5的加密算法对象
+    md5.update(value.encode("utf8"))  # 得到MD5消息摘要
+    md5_vlaue = md5.hexdigest()  # 以16进制返回消息摘要，32位
+    return md5_vlaue
+
+
+def deal_by_process(movie, start):
+    url = API_SHORT % (movie['movie_id'], start)
+    html = get_html(url.strip())
     short_tags = get_tag(html, 'div.comment span.short')
-    # rate_tags = get_tag(html, 'div.ratings-on-weight span.rating_per')
+    comment_info_tags = get_tag(html, 'span.comment-info a')
+    votes_tags = get_tag(html, 'span.votes')
+    comment_time_tags = get_tag(html, 'span.comment-time')
     res = []
-    # alone_rates = []
-    for short in short_tags:
-        # for rate_tag in rate_tags:
-        #     alone_rates.append(rate_tag.text)
-        # all_rates.append(alone_rates)
+    for (short, user, votes, comment_time) in zip(short_tags, comment_info_tags, votes_tags, comment_time_tags):
         movie['message'] = short.text.strip().replace('\r', '').replace('\n', '')
+        movie['username'] = user.text.strip().replace('\r', '').replace('\n', '')
+        movie['votes'] = votes.text.strip().replace('\r', '').replace('\n', '')
+        movie['comment_time'] = comment_time.attrs['title'].strip().replace('\r', '').replace('\n', '')
+        movie['message_username_md5'] = get_md5_value(movie['message'] + movie['username'])
         res.append(movie.copy())
+    if len(res) == 0:
+        return
     to_db(res)
 
 
@@ -192,9 +192,8 @@ def run():
     pool = multiprocessing.Pool(processes=PROCESSES_NUM)
     for movie in movies:
         for start in range(SHORT_CONFIG['start'], SHORT_CONFIG['short_num'], 20):
-            print(start)
-            deal_by_process(movie, start)
-            # pool.apply_async(deal_by_process, (browser, movie, start))
+            # deal_by_process(movie, start)
+            pool.apply_async(deal_by_process, (movie, start))
 
     pool.close()
     pool.join()
