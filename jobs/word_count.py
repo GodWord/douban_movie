@@ -22,12 +22,15 @@ def get_message_by_db(sql):
 
 
 def save_img(movie_id, wordcloud):
-    path = os.path.join(BASE_DIR, 'static\\img\\')
+    path = os.path.join(BASE_DIR, 'static\\img\\' + str(movie_id) + '.png')
     logger.info('movie_id:%d' % (movie_id,))
     logger.info('wordcloud:%s' % (wordcloud,))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis("off")
-    plt.savefig(os.path.join(path, str(movie_id) + '.png'))
+    if os.path.exists(path):
+        os.remove(path)
+    wordcloud.to_file(path)
+    # plt.imshow(wordcloud, interpolation='bilinear')
+    # plt.axis("off")
+    # plt.savefig(wordcloud,os.path.join(path, str(movie_id) + '.png'))
 
 
 if __name__ == '__main__':
@@ -41,7 +44,7 @@ if __name__ == '__main__':
     res['cut_text'] = res['message'].apply(lambda x: " ".join(jieba.cut(x)))
     logger.info('开始词频统计')
     res['wordcloud'] = res['cut_text'].apply(lambda x: WordCloud(font_path="C:/Windows/Fonts/simfang.ttf",
-                                                                 background_color="white", width=1000,
-                                                                 height=880).generate(x))
+                                                                 background_color="white", width=466,
+                                                                 height=466).generate(x))
     logger.info('开始绘制词云')
     res.apply(lambda x: save_img(x['movie_id'], x['wordcloud']), axis=1)
