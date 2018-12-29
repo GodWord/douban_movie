@@ -28,12 +28,9 @@ def save_img(movie_id, wordcloud):
     if os.path.exists(path):
         os.remove(path)
     wordcloud.to_file(path)
-    # plt.imshow(wordcloud, interpolation='bilinear')
-    # plt.axis("off")
-    # plt.savefig(wordcloud,os.path.join(path, str(movie_id) + '.png'))
 
 
-if __name__ == '__main__':
+def word_count():
     Logger()
     sql = 'SELECT `message`, movie_id FROM douban_short'
     logger.info('开始查询数据库')
@@ -48,3 +45,7 @@ if __name__ == '__main__':
                                                                  height=466).generate(x))
     logger.info('开始绘制词云')
     res.apply(lambda x: save_img(x['movie_id'], x['wordcloud']), axis=1)
+
+
+if __name__ == '__main__':
+    word_count()
