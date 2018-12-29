@@ -14,7 +14,7 @@ app = Flask(__name__)
 def index():
     if request.method == 'GET':
         conn = DB_CONNS['default']()
-        sql = 'select movie_id,title,cover from douban_short group by movie_id'
+        sql = 'select movie_id,title,cover,rate from douban_short group by movie_id'
         df = pd.read_sql(sql, conn)
         df['img'] = '/static/img/' + df['movie_id'].astype('str') + '.png'
         df.drop(['movie_id'], axis=1, inplace=True)

@@ -52,10 +52,10 @@
     {% for row in data %}
         <div class="work">
             <a href="">
-                <img src="{{ row[2] }}" class="media" alt=""/>
-                <div class="caption" style="background-image: url('{{ row[1] }}');">
+                <img src="{{ row[1] }}" class="media" alt=""/>
+                <div class="caption" style="background-image: url('{{ row[3] }}');">
                     <div class="work_title">
-                        <h1 style="color: red">{{ row[0] }}</h1>
+                        <h1 style="color: black;font-size: 30px;">{{ row[0] }}<br/><br/>评分:{{ row[2] }}</h1>
                     </div>
                 </div>
             </a>
