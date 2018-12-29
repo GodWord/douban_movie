@@ -1,4 +1,6 @@
 # -*- coding:utf-8 -*-
+import os
+
 import pymysql
 
 douban_short_create_sql = """
@@ -22,6 +24,7 @@ CREATE TABLE `douban_short` (
   `create_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='豆瓣短评表';
 """
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TABLE_CONFIG = {
     'douban_short': douban_short_create_sql,
@@ -40,13 +43,13 @@ MOVIE_CONFIG = {
 }
 SHORT_CONFIG = {
     'start': 0,  # 短评从第几条开始获取
-    'short_num': 500  # 爬取短评条数
+    'short_num': 20  # 爬取短评条数
 }
 DB_CONNS = {
     'default': lambda: pymysql.connect(host="localhost", port=3306, user="root",
                                        password="training", db="crawler_db", charset='utf8mb4'),
 }
-PROCESSES_NUM = 6
+PROCESSES_NUM = 2
 API_SHORT = """
 https://movie.douban.com/subject/%s/comments?start=%d&limit=20&sort=new_score&status=P&percent_type=
 """
