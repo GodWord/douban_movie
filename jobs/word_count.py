@@ -24,7 +24,6 @@ def get_message_by_db(sql):
 def save_img(movie_id, wordcloud):
     path = os.path.join(BASE_DIR, 'static\\img\\' + str(movie_id) + '.png')
     logger.info('movie_id:%d' % (movie_id,))
-    logger.info('wordcloud:%s' % (wordcloud,))
     if os.path.exists(path):
         os.remove(path)
     wordcloud.to_file(path)
